@@ -1,0 +1,24 @@
+\documentclass[cn,table]{elegantpaper}
+\usepackage{graphicx}
+\usepackage{listings-rust}
+\usepackage{pgf-pie}
+\usepackage{rotating}
+\usepackage{tabularray}
+\usepackage{tabularx}
+\usepackage{xcolor}
+
+\graphicspath{{./images/}}
+\DeclareEmphSequence{\bfseries,\itshape,\upshape}
+\lstset{
+    xleftmargin=\parindent,
+    xrightmargin=\parindent
+}
+\renewcommand\updatetext{}
+
+\title{7VM Yellow paper}
+\author{Sin7Y, Applied R\&D Team}
+\date{\today}
+
+\begin{document}
+    \input{processor/main}
+\end{document}
