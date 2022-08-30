@@ -2,5 +2,12 @@
 \subsection{register}\label{subsec: processor-register}
 
 As the white paper describe, there are 16 general-purpose registers.
-符号表示为： $ r_0 - r_{15} $.
+符号表示为： $ \texttt{r}_0 - \texttt{r}_{15} $.
 OlaVM also has two system registers: pc and fp.
+
+pc寄存器加载程序后初始指向地址1的指令。之后pc寄存器指向的地址值随着指令的执行改变。在没执行jump指令和call指令时，每执行一条指令pc寄存器里的地址加1。
+或者跳转到目标寄存器存储的地址。
+
+fp寄存器存加载程序后初始指向地址0xf0000000。之后在执行call指令时地址会增加。在执行ret指令时地址fp寄存器指向地址会回退。
+调用函数，fp指向新的frame以后，函数返回的pc地址放在：$\texttt{[fp-1]}$，函数调用前的fp指向的地址放在：$\texttt{[fp-2]}$, 入参放在：$\texttt{[fp-3]}$。
+函数内部局部变量从$\texttt{[fp]}$开始，fp地址递增存放。返回值存放在 \texttt{r}_0中，如果返回值不是一个域元素，则需要通过返回数据的内存指针来实现。
