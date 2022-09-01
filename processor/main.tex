@@ -1,11 +1,12 @@
 \section{Processor}\label{sec: processor}
-A processor is a core component of OlaVM. It executes the instructions step by step and generates the traces for zero knowledge prover.
-It contains these modules below:
+处理器模块是OlaVM的核心模块之一。它一步一步的执行编译器提供的指令，在执行过程中生成trace。零知识证明者会使用trace生成证明。
+处理器模块包含了下边这些模块：
 \begin{itemize}
-    \item register
+    \item instructions set architecture(ISA)
+    \item hints executor
     \item memory
-    \item storage
-    \item trace
+    \item trace generator
 \end{itemize}
-\input{processor/register.tex}
-\input{processor/memory.tex}
+\input{processor/instructions-arch.tex}
+\input{processor/hints-executor}
+\input{processor/memory}
