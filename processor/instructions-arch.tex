@@ -1,11 +1,15 @@
 \subsection{Instruction Set Architecture}\label{subsec: processor-instructions-executor}
-OlaVM采用冯诺依曼结构。指令地址和内存地址在同一空间。
+OlaVM设计指令地址和内存地址在同一空间访问。因为目前虚拟机的空间足够使用，而使用统一空间对于存储进行约束时的列可以更小，减少开销。
 
 \subsubsection{register}\label{subsec: processor-register}
+目前在设计ZKVM memory hierarchy的L0层时，业内主要有两种模型，一种是寄存器模型，一种是stack模型。
+对于stack模型，状态的更新是按照stack的先进后出模型实现。对于约束的设计相对简洁。
+但是缺点是状态的访问不友好，不能随机访问stack中的某个地址的数据，对于寄存器模型只需要一条指令完成的读取操作，stack模型需要多次进行pop和push的操作。或者为了提高效率，如miden的设计中增加swap类指令辅助完成stack内数据访问。
+对于register模型，可以随机访问任意寄存器。但是缺点是约束模型需要对上下指令进行copy约束，证明的开销比stack大。
 
-As the white paper describe, there are 16 general-purpose registers.
-符号表示为：$\texttt{r}_0 - \texttt{r}_{15}$.
-其中的$\texttt{r}_{15}$作为fp(frame pointer)。
+像白皮书设计的那样，OlaVM选择的是寄存器模型。there are 16 general-purpose registers.
+符号表示为：$\texttt{r}_0 - \texttt{r}_{15}$。
+其中的$\texttt{r}_{15}$作为$\texttt{fp}$(frame pointer)。$\texttt{fp}$为$\texttt{r}_{15}$的别名。
 
 pc指针加载程序后初始指向地址0的指令。之后pc指向的地址值随着指令的执行改变。在没执行jump指令和call指令时，每执行一条指令，如果指令没有使用立即数，pc寄存器里的地址加1，否则加2。
 
@@ -17,16 +21,16 @@ OlaVM的指令集定义如下表, A表示可能是立即数或者寄存器：
         \begin{tabular}{|c|c|c|c|c|c|}
             \hline
             \textit{Type} & \textit{Encoding} & \textit{Instruction} & \textit{Operands} & \textit{Description} & \textit{flag} \\ \hline
-            \multirow{2}{*}{Logic} & 00001 & ADD & ri rj A & Compute [rj] + [A] and store the result in ri & overflow \\ \cline{2-6}
-            & 00010 & MUL & ri rj A & Compute [rj] * [A] and store the least significant bits of the result in ri & overflow \\ \hline
-            Cmp & 00011 & EQ & ri A & Equality comparison & r[i] = [A] \\ \hline
-            Move & 00100 & MOV & ri A & Copy the data of [A] to ri &  \\ \hline
-            \multirow{4}{*}{Flow} & 00101 & JMP & A & Set pc to [A] &  \\ \cline{2-6}
-            & 00110 & CJMP & A & If flag = 1, set pc to [A], else increment pc as usual &  \\ \cline{2-6}
-            & 00111 & CALL & A & \multicolumn{1}{l|}{\begin{tabular}[c]{@{}l@{}}The Call instruction consists of the following steps\\ 1. store return pc to the next memory address.\\ 2. jump to the address A\end{tabular}} &  \\ \cline{2-6}
+            \multirow{2}{*}{Field Operation} & 00001 & ADD & ri rj A & Compute rj + A and store the result in ri &   \\ \cline{2-6}
+            & 00010 & MUL & ri rj A & Compute rj * A and store the the result in ri &  \\ \hline
+            Cmp & 00011 & EQ & ri A & Equality comparison & ri = A \\ \hline
+            Move & 00100 & MOV & ri A & Copy the data of A to ri &  \\ \hline
+            \multirow{4}{*}{Flow} & 00101 & JMP & A & Set pc equal A &  \\ \cline{2-6}
+            & 00110 & CJMP & A & If flag = 1, set pc equal A, else increment pc as usual &  \\ \cline{2-6}
+            & 00111 & CALL & A & \multicolumn{1}{l|}{\begin{tabular}[c]{@{}l@{}}The Call instruction consists of the following steps\\ 1. store return pc to the frame address [fp-1].\\ 2. jump to the address A\end{tabular}} &  \\ \cline{2-6}
             & 01000 & RET &  & \multicolumn{1}{l|}{\begin{tabular}[c]{@{}l@{}}The Ret instruction consists of the following two steps\\ 1. use the memory address stored in the fp register to find the returned pc and jump to the location of the returned pc.\\ 2. update the fp register to the fp before the call\end{tabular}} &  \\ \hline
             \multirow{2}{*}{RAM} & 01001 & MLOAD & ri A & Load the Word in memory begin with start index is [A] and store the Word into ri &  \\ \cline{2-6}
-            & 01010 & MSTORE & A ri & Store [ri] at the start of memory where the start index is [A] &  \\ \hline
+            & 01010 & MSTORE & A ri & Store ri at the start of memory where the start index is [A] &  \\ \hline
         \end{tabular}%
     }
     \caption{Instruction set}
@@ -42,7 +46,7 @@ Olavm 采用 Word(位宽) = 32bits对指令编码。
     \item Field4: 字段名称source register1(reg\_src1)。存储了源寄存器1的序号，包含了4 bits，支持0-15共16个寄存器序号。
     \item Field5: 字段名称source register2(reg\_src2)。存储了源寄存器2的名称，包含了4 bits，支持0-15共16个寄存器序号。
     \item Field6: 字段名称padding bits(paddings)。这个filed一共有14 bits。所有bit使用0进行填充，后续可以扩充定义别的字段。
-    \item Field7: 字段名称字段名称immediate data。这个field会根据field2字段决定是否存在，如果filed2值为1，这个字段将存在一个立即数值，这个字段是1 Word。
+    \item Field7: 字段名称字段名称immediate data(immediate)。这个field会根据field2字段决定是否存在，如果filed2值为1，这个字段将存在一个立即数值，这个字段是1 Word。
 \end{itemize}
 
 由上述定义可得：指令编码在不存在立即数的情况下占用1W空间，存在立即数的情况下占用2W空间。编码格式见下表：
@@ -59,15 +63,86 @@ Olavm 采用 Word(位宽) = 32bits对指令编码。
     \label{table: processor_instruction_decode}
 \end{table}
 
+执行指令的状态转换伪代码如下：
+\begin{lstlisting}[language={}]
+
+new_op:
+opcode = instuction[pc].opcode
+imm = instuction[pc].imm
+ri = reg_dest
+rj = reg_src1
+
+if imm == 1:
+    next = pc + 2
+    A = immediate
+else
+    next = pc + 1
+    A = reg_src2
+endif
+
+switch opcode：
+    ADD:
+        ri = rj + A
+        break
+    MUL:
+        ri = rj * A
+        break
+    EQ:
+        if ri == A:
+            flag = 1
+        else
+            flag = 0
+        break
+    MOV:
+        ri = A
+        break
+    JMP:
+        pc = A
+        goto new_op
+    CJMP:
+        if flag == 1:
+            pc = A
+        goto new_op
+    CALL:
+        [fp-1] = next
+        pc = A
+        goto new_op
+    RET:
+        fp = [fp-2]
+        pc = [fp-1]
+        goto new_op
+    MLOAD:
+        ri = [A]
+        break
+    MSTORE:
+        [A] = ri
+        break
+pc = next
+goto new_op
+\end{lstlisting}
+
+下边是一段算数运算的指令编码的例子, l1和l2实现了指令\textit{mov r0 0x8}，l3和l4实现了指令\textit{mov r1 0x2}，
+l5和l6实现了指令\textit{mov r2 0x3}，l7实现了指令\textit{add r3 r0 r1}，l8实现了指令\textit{mul r4 r3 r2}，计算结果\textit{r0 = 8, r1 = 2, r2 = 3, r3 = 10, r4 = 30}
+\begin{lstlisting}[label={lst:inst-decode}]
+  l1:  0x24000000
+  l2:  0x8
+  l3:  0x24400000
+  l4:  0x2
+  l5:  0x24800000
+  l6:  0x3
+  l7:  0x08c04000
+  l8:  0x110c8000
+\end{lstlisting}
 
 \subsubsection{procedure call standard}\label{subsec: processor-instructions-executor-abi}
 
 fp寄存器存加载程序后初始化指向frame堆栈的首地址。之后在执行call指令时地址会增加。在执行ret指令时fp寄存器指向地址会回退。
-使用指令call调用函数，fp指向新的frame以后，函数返回的pc地址放在：\texttt{[fp-1]}，函数调用前的fp指向的地址放在：\texttt{[fp-2]}, 前4个入参依次放在$\texttt{r}_0 - \texttt{r}_{3}$四个寄存器里。从第5个入参开始，依次递减放在：\texttt{[fp-3]}, \texttt{[fp-4]} $\cdots$。
+使用指令call调用函数，fp指向新的frame以后，函数返回的pc地址放在：\texttt{[fp-1]}，函数调用前的fp指向的地址放在：\texttt{[fp-2]}, 前4个入参依次放在$\texttt{r}_0 - \texttt{r}_{3}$四个寄存器里。
+从第5个入参开始，依次递减放在：\texttt{[fp-3]}, \texttt{[fp-4]} $\cdots$。
 函数内部局部变量从\texttt{[fp]}开始，fp地址递增存放。返回值存放在 $\texttt{r}_0$中，如果返回值不是一个域元素，则需要通过返回数据的内存指针来实现。
 
-比如： 调用函数\texttt{call(foo(a: felt, b: felt, c: felt, d: felt, e: felt))}, 入参：\texttt{a=0x1, b=0x2, c=0x3, d=0x4, e=0x5}。
-\begin{lstlisting}[label={lst:lstlisting}]
+比如： 调用函数\texttt{foo(a: felt, b: felt, c: felt, d: felt, e: felt)}, 入参：\texttt{a=0x1, b=0x2, c=0x3, d=0x4, e=0x5}。
+\begin{lstlisting}[label={lst:function_call}]
 func foo(a: felt, b: felt, c: felt, d: felt, e: felt)
     let sum = 0;
     sum = a+b;

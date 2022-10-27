@@ -1,0 +1,58 @@
+\subsection{Trace Generator}\label{subsec: : trace-generator}
+当OlaVM在执行编译好的指令时，它会在每执行一条指令时，将对应的内存状态和寄存器状态保存在一张trace表中。
+\subsubsection{Main Trace}\label{subsubsec: olavm-main-trace}
+trac主表的列有定义如下表, 其中VM的时钟clk和取指令地址pc各占一列。寄存器状态从$\texttt{r}_0 - \texttt{r}_{15}$一共16列，内存占5列。trace的列定义见表\ref{table: olavm-trace-table},内存子表的定义见下节 \ref{subsubsec: olavm-trace-memory}，
+主表的clk字段是按照升序每行加1，可以唯一的标识该行：
+\begin{table}[!ht]
+    \centering \resizebox{0.6\linewidth}{!}{
+        \begin{tabular}{*{8}{|c}|}
+            \hline
+            clk & pc & instruction & flag & r0 & $\cdots$ & r15 & memory  \\ \hline
+        \end{tabular}}
+    \caption{OlaVM的trace表结构}
+    \label{table: olavm-trace-table}
+\end{table}
+
+\subsubsection{Memory Trace}\label{subsubsec: olavm-trace-memory}
+OlaVM的内存trace由五列组成
+\begin{itemize}
+    \item \verb|addr|： 内存地址address的缩写。在表中是单调增的。
+    \item \verb|clk|：VM的clock的缩写。操作内存时的VM时钟。在addr相同的情况下，clk是单调增的。
+    \item \verb|pc|： VM操作内存时的指令地址。
+    \item \verb|rw|： VM操作内存时的操作状态，目前状态有两种：0代表读和1代表写。
+    \item \verb|value|： 内存当前存储的值。
+\end{itemize}
+
+格式见下表4 \ref{table: olavm-trace-memory-table}。
+
+\begin{table}[!ht]
+    \centering \resizebox{0.4\linewidth}{!}{
+        \begin{tabular}{*{5}{|c}|}
+            \hline
+            addr & clk & pc & rw & value    \\ \hline
+        \end{tabular}}
+    \caption{OlaVM的trace表结构}
+    \label{table: olavm-trace-memory-table}
+\end{table}
+
+下表5是一个内存子trace table的例子。按照后续约束规则，首先按照addr升序排列，同一个addr按照clk升序排列，如果该addr在未进行写操作之前进行读操作，读取值为默认0。
+该表每行的addr和clk两个字段的组合可以唯一标识该行：
+
+\begin{table}[!ht]
+    \centering \resizebox{0.4\linewidth}{!}{
+        \begin{tabular}{*{5}{|c}|}
+            \hline
+            addr & clk & pc & rw & value    \\ \hline
+            100 & 4 & 3 & 1 & 0x25    \\ \hline
+            100 & 7 & 5 & 0 & 0x25    \\ \hline
+            100 & 11 & 7 & 0 & 0x25    \\ \hline
+            100 & 15 & 3 & 1 & 0x74    \\ \hline
+            100 & 17 & 6 & 0 & 0x74    \\ \hline
+            102 & 8 & 6 & 1 & 0x11    \\ \hline
+            102 & 13 & 9 & 0 & 0x11    \\ \hline
+            102 & 19 & 19 & 1 & 0x53    \\ \hline
+            102 & 20 & 20 & 0 & 0x53    \\ \hline
+        \end{tabular}}
+    \caption{OlaVM的trace表例子}
+    \label{table: olavm-trace-memory-table-example}
+\end{table}

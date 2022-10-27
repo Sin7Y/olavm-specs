@@ -1,0 +1,122 @@
+\subsection{Stdlib}\label{subsec: : stdlib}
+VM支持stdlib库的执行。比如无符号数的算术计算，常用hash函数(SHA256)等。
+\subsubsection{u32 arithmatic}\label{subsec: u32-arithmatic}
+OlaVM支持u32数据类型的算法计算。包括下边操作：
+\begin{itemize}
+    \item \verb|u32_add|
+    \item \verb|u32_sub|
+    \item \verb|u32_mul|
+    \item \verb|u32_div|
+\end{itemize}
+
+
+\verb|u32 ADD|
+
+u32的加法算法伪代码如下：
+
+\begin{lstlisting}[language={}]
+func u32_add(data_src_1: Felt, data_src_2: Felt) {
+    MOV r_src1 data_src_1
+    MOV r_src2 data_src_2
+
+    range_check(r_src1, MAX_u32)
+    range_check(r_src2, MAX_u32)
+
+    ADD r_dst r_src1 r_src2
+    %{
+        (r_dst_hi, r_dst_lo) = split64(r_dst)
+    %}
+
+    MUL r_assert r_dst_hi 2^32
+    ADD r_assert r_assert r_dst_low
+    EQ r_dst r_assert
+
+    return (r_dst_hi, r_dst_lo)
+}
+\end{lstlisting}
+
+
+\verb|u32 SUB|
+
+u32的减法算法伪代码如下：
+
+\begin{lstlisting}[language={}]
+func u32_sub(data_src_1: Felt, data_src_2: Felt) {
+    MOV r_src1 data_src_1
+    MOV r_src2 data_src_2
+
+    range_check(r_src1, MAX_u32)
+    range_check(r_src2, MAX_u32)
+
+    local borrow_flag
+    local difference
+    %{
+        if r_src1 > r_src2 {
+            borrow_flag = 0
+        } else {
+            borrow_flag = 2^32
+        }
+        difference = borrow_flag + r_src1 - r_src2
+    %}
+
+    ADD r_assert1 r_src2 difference
+    ADD r_assert2 r_src1 borrow_flag
+    EQ r_assert1 r_assert2
+
+    return (difference, borrow_flag)
+}
+\end{lstlisting}
+
+
+\verb|u32 MUL|
+
+u32的乘法算法伪代码如下：
+
+\begin{lstlisting}[language={}]
+func u32_mul(data_src_1: Felt, data_src_2: Felt) {
+    MOV r_src1 data_src_1
+    MOV r_src2 data_src_2
+
+    range_check(r_src1, MAX_u32)
+    range_check(r_src2, MAX_u32)
+
+    MUL r_dst r_src1 r_src2
+    %{
+        (r_dst_hi, r_dst_lo) = split64(r_dst)
+    %}
+
+    MUL r_assert r_dst_hi 2^32
+    ADD r_assert r_assert r_dst_low
+    EQ r_dst r_assert
+
+    return (r_dst_hi, r_dst_lo)
+}
+\end{lstlisting}
+
+
+\verb|u32 DIV|
+
+u32的除法算法伪代码如下：
+
+\begin{lstlisting}[language={}]
+func u32_div(data_src_1: Felt, data_src_2: Felt) {
+    MOV r_src1 data_src_1
+    MOV r_src2 data_src_2
+
+    range_check(r_src1, MAX_u32)
+    range_check(r_src2, MAX_u32)
+
+    local quotient;
+    local remainder;
+    %{
+        quotient = r_src1 / r_src2
+        remainder = r_src1 % r_src2
+    %}
+
+    MUL r_assert r_src2 quotient
+    ADD r_assert r_assert remainder
+    EQ r_src1 r_assert
+
+    return (r_dst_hi, r_dst_lo)
+}
+\end{lstlisting}

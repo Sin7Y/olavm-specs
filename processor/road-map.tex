@@ -1,0 +1,17 @@
+\subsection{Road Map}\label{subsec: : road-map}
+OlaVM的VM开发分为了多个阶段。下边是各个阶段计划实现的目标。
+\subsubsection{Phase 1}
+在第一阶段，OlaVM的虚拟机将实现基本的指令编解码，指令执行和trace table的生成。保证跑通ZK-VM的最小系统。
+\begin{itemize}
+    \item \verb|instruction encode and decode|
+    \item \verb|instruction execution|
+    \item \verb|trace table generation|
+\end{itemize}
+
+\subsubsection{Phase 2}
+在第二阶段，OlaVM的虚拟机将实现对于ZKP进行优化的prophet代码执行，编译器提供stdlib标准库和支持builtins相关电路的trace table生成。
+\begin{itemize}
+    \item \verb|prophet execution|
+    \item \verb|stdlib|
+    \item \verb|builtins|
+\end{itemize}
