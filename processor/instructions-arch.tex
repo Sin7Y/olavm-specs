@@ -29,8 +29,8 @@ OlaVM的指令集定义如下表, A表示可能是立即数或者寄存器：
             & 00110 & CJMP & A & If flag = 1, set pc equal A, else increment pc as usual &  \\ \cline{2-6}
             & 00111 & CALL & A & \multicolumn{1}{l|}{\begin{tabular}[c]{@{}l@{}}The Call instruction consists of the following steps\\ 1. store return pc to the frame address [fp-1].\\ 2. jump to the address A\end{tabular}} &  \\ \cline{2-6}
             & 01000 & RET &  & \multicolumn{1}{l|}{\begin{tabular}[c]{@{}l@{}}The Ret instruction consists of the following two steps\\ 1. use the memory address stored in the fp register to find the returned pc and jump to the location of the returned pc.\\ 2. update the fp register to the fp before the call\end{tabular}} &  \\ \hline
-            \multirow{2}{*}{RAM} & 01001 & MLOAD & ri A & Load the Word in memory begin with start index is [A] and store the Word into ri &  \\ \cline{2-6}
-            & 01010 & MSTORE & A ri & Store ri at the start of memory where the start index is [A] &  \\ \hline
+            \multirow{2}{*}{RAM} & 01001 & MLOAD & ri [A] & Read the value from memory [A] and store it into ri. A can be a intermediate data or register value &  \\ \cline{2-6}
+            & 01010 & MSTORE & [A] rj & Read the value from register rj and store it into memory [A]. A can be a intermediate data or register value &  \\ \hline
         \end{tabular}%
     }
     \caption{Instruction set}
