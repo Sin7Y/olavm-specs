@@ -1,7 +1,7 @@
 \subsection{Trace Generator}\label{subsec: : trace-generator}
 当OlaVM在执行编译好的指令时，它会在每执行一条指令时，将对应的内存状态和寄存器状态保存在一张trace表中。
 \subsubsection{Main Trace}\label{subsubsec: olavm-main-trace}
-trac主表的列有定义如下表, 其中VM的时钟clk和取指令地址pc各占一列。寄存器状态从$\texttt{r}_0 - \texttt{r}_{15}$一共16列，内存占5列。trace的列定义见表\ref{table: olavm-trace-table},内存子表的定义见下节 \ref{subsubsec: olavm-trace-memory}，
+trac主表的列有定义如下表, 其中VM的时钟clk和取指令地址pc各占一列。寄存器状态从$\texttt{r}_0 - \texttt{r}_{15}$一共16列，内存占1列。memory字段为每行指令操作的内存地址，如果指令没有操作内存，该字段为0。race的列定义见表\ref{table: olavm-trace-table},内存子表的定义见下节 \ref{subsubsec: olavm-trace-memory}，
 主表的clk字段是按照升序每行加1，可以唯一的标识该行：
 \begin{table}[!ht]
     \centering \resizebox{0.6\linewidth}{!}{
@@ -14,45 +14,131 @@ trac主表的列有定义如下表, 其中VM的时钟clk和取指令地址pc各�
 \end{table}
 
 \subsubsection{Memory Trace}\label{subsubsec: olavm-trace-memory}
-OlaVM的内存trace由五列组成
+OlaVM的内存trace由六列组成
 \begin{itemize}
     \item \verb|addr|： 内存地址address的缩写。在表中是单调增的。
     \item \verb|clk|：VM的clock的缩写。操作内存时的VM时钟。在addr相同的情况下，clk是单调增的。
     \item \verb|pc|： VM操作内存时的指令地址。
     \item \verb|rw|： VM操作内存时的操作状态，目前状态有两种：0代表读和1代表写。
     \item \verb|value|： 内存当前存储的值。
+    \item \verb|prophet|： 如果是prophet操作内存，该字段为1，指令操作内存，该字段为0。
 \end{itemize}
 
-格式见下表4 \ref{table: olavm-trace-memory-table}。
+格式见下表 \ref{table: olavm-trace-memory-table}。
 
 \begin{table}[!ht]
     \centering \resizebox{0.4\linewidth}{!}{
-        \begin{tabular}{*{5}{|c}|}
+        \begin{tabular}{*{6}{|c}|}
             \hline
-            addr & clk & pc & rw & value    \\ \hline
+            addr & clk & pc & rw & value & prophet    \\ \hline
         \end{tabular}}
     \caption{OlaVM的trace表结构}
     \label{table: olavm-trace-memory-table}
 \end{table}
 
-下表5是一个内存子trace table的例子。按照后续约束规则，首先按照addr升序排列，同一个addr按照clk升序排列，如果该addr在未进行写操作之前进行读操作，读取值为默认0。
-该表每行的addr和clk两个字段的组合可以唯一标识该行：
+下表 \ref{table: olavm-trace-memory-table-example} 是一个内存子trace table的例子。按照后续约束规则，首先按照addr升序排列，同一个addr按照clk升序排列，如果该addr在未进行写操作之前进行读操作，读取值为默认0。
+该表每行的addr和clk两个字段的组合可以唯一标识该行，注意内存地址102在第19个clk时，被prophet进行了写操作：
+
+\begin{table}[!ht]
+    \centering \resizebox{0.4\linewidth}{!}{
+        \begin{tabular}{*{6}{|c}|}
+            \hline
+            addr & clk & pc & rw & value & prophet   \\ \hline
+            100 & 4 & 3 & 1 & 0x25 & 0   \\ \hline
+            100 & 7 & 5 & 0 & 0x25 & 0    \\ \hline
+            100 & 11 & 7 & 0 & 0x25 & 0    \\ \hline
+            100 & 15 & 3 & 1 & 0x74 & 0    \\ \hline
+            100 & 17 & 6 & 0 & 0x74 & 0    \\ \hline
+            102 & 8 & 6 & 1 & 0x11 & 0    \\ \hline
+            102 & 13 & 9 & 0 & 0x11 & 0    \\ \hline
+            102 & 19 & 19 & 1 & 0x53 & 1    \\ \hline
+            102 & 20 & 20 & 0 & 0x53 & 0    \\ \hline
+        \end{tabular}}
+    \caption{OlaVM的memory trace表例子}
+    \label{table: olavm-trace-memory-table-example}
+\end{table}
+
+\subsubsection{Range Check trace}\label{subsubsec: olavm-trace-range-check}
+OlaVM的range check trace由5列组成
+\begin{itemize}
+    \item \verb|input value|： 要range check的值。
+    \item \verb|limb0|： check value的第0-7位。
+    \item \verb|limb1|： check value的第8-15位。
+    \item \verb|limb2|： check value的第16-23位。
+    \item \verb|limb3|： check value的第24-31位。
+\end{itemize}
+
+格式见下表 \ref{table: olavm-trace-range-check-table}。
 
 \begin{table}[!ht]
     \centering \resizebox{0.4\linewidth}{!}{
         \begin{tabular}{*{5}{|c}|}
             \hline
-            addr & clk & pc & rw & value    \\ \hline
-            100 & 4 & 3 & 1 & 0x25    \\ \hline
-            100 & 7 & 5 & 0 & 0x25    \\ \hline
-            100 & 11 & 7 & 0 & 0x25    \\ \hline
-            100 & 15 & 3 & 1 & 0x74    \\ \hline
-            100 & 17 & 6 & 0 & 0x74    \\ \hline
-            102 & 8 & 6 & 1 & 0x11    \\ \hline
-            102 & 13 & 9 & 0 & 0x11    \\ \hline
-            102 & 19 & 19 & 1 & 0x53    \\ \hline
-            102 & 20 & 20 & 0 & 0x53    \\ \hline
+            input value & limb0 & limb1 & limb2 & limb3     \\ \hline
         \end{tabular}}
-    \caption{OlaVM的trace表例子}
-    \label{table: olavm-trace-memory-table-example}
+    \caption{OlaVM的range check的trace表结构}
+    \label{table: olavm-trace-range-check-table}
+\end{table}
+
+\subsubsection{Bitwise trace}\label{subsubsec: olavm-bitwise-trace}
+OlaVM的bitwise trace由六列组成。同时bitwise操作的两个输入数会放入builtin的range check表。
+\begin{itemize}
+    \item \verb|clk|： 该bitwise操作对应在主trace的时钟周期。
+    \item \verb|sel|： 选择bitwise的操作类型，0, 1, 2分别对应AND, OR, XOR。
+    \item \verb|op1_value|： bitwise操作的第一个输入值。
+    \item \verb|op2_value|： bitwise操作的第二个输入值。
+    \item \verb|res_value|： bitwise操作的结果值。
+    \item \verb|target_value|： op1, op2, res的limbs的组合结果，用于进行lookup。traget=op1 $\cdot 2^{16}$+op2 $\cdot 2^8$+res
+    \item \verb|limb op1_0|： op1 value的第0-7位。
+    \item \verb|limb op1_1|： op1 value的第8-15位。
+    \item \verb|limb op1_2|： op1 value的第16-23位。
+    \item \verb|limb op1_3|： op1 value的第24-31位。
+    \item \verb|limb op2_0|： op2 value的第0-7位。
+    \item \verb|limb op2_1|： op2 value的第8-15位。
+    \item \verb|limb op2_2|： op2 value的第16-23位。
+    \item \verb|limb op2_3|： op2 value的第24-31位。
+    \item \verb|limb res_0|： res value的第0-7位。
+    \item \verb|limb res_1|： res value的第8-15位。
+    \item \verb|limb res_2|： res value的第16-23位。
+    \item \verb|limb res_3|： res value的第24-31位。
+    \item \verb|limb target_0|： target value的第0-7位。
+    \item \verb|limb target_1|： target value的第8-15位。
+    \item \verb|limb target_2|： target value的第16-23位。
+    \item \verb|limb target_3|： target value的第24-31位。
+\end{itemize}
+
+格式见下表 \ref{table: olavm-trace-bitwise-table}。
+
+\begin{table}[!ht]
+    \centering \resizebox{\linewidth}{!}{
+        \begin{tabular}{*{22}{|c}|}
+            \hline
+            clk & sel & op1\_value & op2\_value & res\_value & target\_value & op1\_0 & op1\_1 & op1\_2 & op1\_3 & op2\_0 & op2\_1 & op2\_2 & op2\_3 & res\_0 & res\_1 & res\_2 & res\_3 & target\_0 & target\_1 & target\_2 & target\_3\\ \hline
+        \end{tabular}}
+    \caption{OlaVM的bitwise的trace表结构}
+    \label{table: olavm-trace-bitwise-table}
+\end{table}
+
+\subsubsection{Comparison trace}\label{subsubsec: olavm-comparison-trace}
+OlaVM的comparison trace由六列组成。同时comparison操作的两个输入数会放入builtin的range check表。
+\begin{itemize}
+    \item \verb|clk|： 该comparison操作对应在主trace的时钟周期。
+    \item \verb|sel|： 选择comparison的操作类型，sel=0为neq，sel=1为gte。
+    \item \verb|op1 value|： bitwise操作的第一个输入值。
+    \item \verb|op2 value|： bitwise操作的第二个输入值。
+    \item \verb|flag|： bitwise操作的标志位状态，1是true，0是false。
+    \item \verb|diff|： bitwise操作的两个输入的差，sel=1时为差的绝对值。
+    \item \verb|diff_inv|： bitwise操作的两个输入的差的逆，差为0，则该值为0。
+\end{itemize}
+
+格式见下表 \ref{table: olavm-trace-comparison-table}。
+
+\begin{table}[!ht]
+    \centering \resizebox{\linewidth}{!}{
+        \begin{tabular}{*{7}{|c}|}
+            \hline
+            clk & sel & op1 value & op2 value & flag & diff & diff\_inv   \\ \hline
+        \end{tabular}}
+    \caption{OlaVM的comparison的trace表结构}
+    \label{table: olavm-trace-comparison-table}
 \end{table}

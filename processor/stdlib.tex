@@ -27,6 +27,10 @@ func u32_add(data_src_1: Felt, data_src_2: Felt) {
         (r_dst_hi, r_dst_lo) = split64(r_dst)
     %}
 
+
+    range_check(r_dst_lo, MAX_u32)
+    range_check(r_dst_hi, MAX_u32)
+
     MUL r_assert r_dst_hi 2^32
     ADD r_assert r_assert r_dst_low
     EQ r_dst r_assert
@@ -85,6 +89,9 @@ func u32_mul(data_src_1: Felt, data_src_2: Felt) {
         (r_dst_hi, r_dst_lo) = split64(r_dst)
     %}
 
+    range_check(r_dst_lo, MAX_u32)
+    range_check(r_dst_hi, MAX_u32)
+
     MUL r_assert r_dst_hi 2^32
     ADD r_assert r_assert r_dst_low
     EQ r_dst r_assert
@@ -106,8 +113,8 @@ func u32_div(data_src_1: Felt, data_src_2: Felt) {
     range_check(r_src1, MAX_u32)
     range_check(r_src2, MAX_u32)
 
-    local quotient;
-    local remainder;
+    local quotient
+    local remainder
     %{
         quotient = r_src1 / r_src2
         remainder = r_src1 % r_src2
@@ -118,5 +125,30 @@ func u32_div(data_src_1: Felt, data_src_2: Felt) {
     EQ r_src1 r_assert
 
     return (r_dst_hi, r_dst_lo)
+}
+\end{lstlisting}
+
+\verb|u32 GT|
+
+u32的算术比较大于算法伪代码如下,输入参数为data1和data2，如果data1大于data2，返回1，否则返回0：
+
+\begin{lstlisting}[language={}]
+func u32_gt(data_src_1: Felt, data_src_2: Felt) {
+    if data_src_1 == data_src_2:
+        return 0;
+
+    (difference, borrow_flag) = u32_sub(data_src_1, data_src_2)
+    return (1-borrow_flag)
+}
+\end{lstlisting}
+
+\verb|u32 LT|
+
+u32的算术比较大于算法伪代码如下,输入参数为data1和data2，如果data1大于data2，返回1，否则返回0：
+
+\begin{lstlisting}[language={}]
+func u32_lt(data_src_1: Felt, data_src_2: Felt) {
+    (difference, borrow_flag) = u32_sub(data_src_1, data_src_2)
+    return borrow_flag
 }
 \end{lstlisting}

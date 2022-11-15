@@ -1,0 +1,13 @@
+\subsection{builtin}\label{subsec: processor-instructions-builtin}
+OlaVM使用builtin来实现range check, hash等功能。VM实现builtin功能需要编译器提供需要支持的builtin类型，编码定义在 表 \ref{table:instruction-set}的builtin模块。
+
+\subsubsection{range check}
+Range check需要验证指定寄存器内存的值是否为u32类型。VM读到builtin的range check指令，会将要check的寄存器的值放入到builtin的range check表。
+
+\subsubsection{bitwise}
+VM支持对于两个寄存器内的u32类型的数进行与，或，异或和取反操作。VM读到builtin的bitwise指令,将bitwise操作的寄存器的值放入到builtin的bitwise表。将进行bitwise操作的两个输入数放入builtin的range check表。
+
+\subsubsection{comparison}
+VM支持对于两个寄存器内的u32类型的数进行大于等于和不等于操作。VM读到builtin的comparison指令,将comparison操作的寄存器的值放入到builtin的comparison表。将进行comparison操作的两个输入数放入builtin的range check表。
+将gte的diff字段的数也要放入builtin的range check表。该diff为两个输入的差的绝对值。
+
