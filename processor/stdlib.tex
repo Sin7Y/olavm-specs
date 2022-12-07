@@ -127,3 +127,118 @@ func u32_div(data_src_1: Felt, data_src_2: Felt) {
     return (r_dst_hi, r_dst_lo)
 }
 \end{lstlisting}
+
+\subsubsection{u64 arithmatic}\label{subsec: u64-arithmatic}
+
+OlaVM支持u64数据类型的算法计算。包括下边操作：
+\begin{itemize}
+    \item \verb|u64_add|
+    \item \verb|u64_sub|
+    \item \verb|u64_mul|
+    \item \verb|u64_div|
+\end{itemize}
+
+\verb|u64 ADD|
+
+u64的加法算法伪代码如下：
+
+\begin{lstlisting}[language={}]
+func u64_add(data_src_1_lo: Felt, data_src_1_hi: Felt, data_src_2_lo: Felt, data_src_2_hi: Felt) {
+    range_check(r0, MAX_u32)
+    range_check(r1, MAX_u32)
+
+    ADD r4 r0 r1
+    %{
+        (mem[addr_hi0], mem[addr_lo0]) = split64(r4)
+    %}
+
+    mload r5, mem[addr_lo0]
+    mload r6, mem[addr_hi0]
+
+    range_check(r5, MAX_u32)
+    range_check(r6, MAX_u32)
+
+
+    MUL r7 r6 2^32
+    ADD r7 r7 r0
+    ASSERT r4 r7
+
+    range_check(r2, MAX_u32)
+    range_check(r3, MAX_u32)
+
+    ADD r4 r2 r3
+    ADD r4 r4 r6
+
+    %{
+        (mem[addr_hi1], mem[addr_lo1]) = split64(r4)
+    %}
+
+    mload r0, mem[addr_lo1]
+    mload r1, mem[addr_hi1]
+
+    range_check(r0, MAX_u32)
+    range_check(r1, MAX_u32)
+
+    MUL r1 r1 2^32
+    ADD r1 r1 r0
+    ASSERT r4 r1
+
+    return (mem[addr_lo0], mem[addr_lo1], mem[addr_hi1])
+}
+\end{lstlisting}
+
+\verb|u64 MUL|
+
+u64的乘法算法伪代码如下：
+
+\begin{lstlisting}[language={}]
+func u64_mul(data_src_1_lo: Felt, data_src_1_hi: Felt, data_src_2_lo: Felt, data_src_2_hi: Felt) {
+    mload r0 [fp-3]
+    mload r1 [fp-5]
+
+    range_check(r0, MAX_u32)
+    range_check(r1, MAX_u32)
+
+    MUL r2 r0 r1
+    %{
+        (mem[addr_hi0], mem[addr_lo0]) = split64(r2)
+    %}
+
+    mload r0, mem[addr_lo0]
+    mload r1, mem[addr_hi0]
+
+    range_check(r0, MAX_u32)
+    range_check(r1, MAX_u32)
+
+
+    MUL r3 r1 2^32
+    ADD r3 r3 r0
+    ASSERT r2 r3
+
+    mload r4 [fp-4]
+    mload r5 [fp-6]
+
+    range_check(r4, MAX_u32)
+    range_check(r5, MAX_u32)
+
+    MUL r2 r4 r5
+    ADD r2 r2 r1
+
+    %{
+        (mem[addr_hi1], mem[addr_lo1]) = split64(r2)
+    %}
+
+    mload r6, mem[addr_lo1]
+    mload r7, mem[addr_hi1]
+
+    range_check(r6, MAX_u32)
+    range_check(r7, MAX_u32)
+
+    MUL r7 r7 2^32
+    ADD r7 r7 r6
+    ASSERT r2 r7
+
+    return (mem[addr_lo0], mem[addr_lo1], mem[addr_hi1])
+}
+\end{lstlisting}
+

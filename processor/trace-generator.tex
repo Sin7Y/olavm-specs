@@ -1,24 +1,113 @@
 \subsection{Trace Generator}\label{subsec: : trace-generator}
 当OlaVM在执行编译好的指令时，它会在每执行一条指令时，将对应的内存状态和寄存器状态保存在一张trace表中。
 \subsubsection{Main Trace}\label{subsubsec: olavm-main-trace}
-trac主表的列有定义如下表, 其中VM的时钟clk和取指令地址pc各占一列。寄存器状态从$\texttt{r}_0 - \texttt{r}_{15}$一共16列，内存占1列。memory字段为每行指令操作的内存地址，如果指令没有操作内存，该字段为0。race的列定义见表\ref{table: olavm-trace-table},内存子表的定义见下节 \ref{subsubsec: olavm-trace-memory}，
-主表的clk字段是按照升序每行加1，可以唯一的标识该行：
+trac主表的列分为5部分context, instruction, register selectors, opcode selectors, builtin selectors。
+
+
+\textbf{context columns}
+
+主trace的context相关列一共12列。其中VM的时钟clk和取指令地址pc各占一列。flag状态标志占一列。寄存器状态从$\texttt{r}_0 - \texttt{r}_{8}$一共9列。
+注意registers的9列存的是执行前的状态。
+\begin{itemize}
+    \item \verb|clk|：VM的clock的缩写。操作内存时的VM时钟。在addr相同的情况下，clk是单调增的。
+    \item \verb|pc|： VM操作内存时的指令地址。
+    \item \verb|flag|： VM操作内存时的指令地址。
+    \item \verb|registers|： 寄存器状态从$\texttt{r}_0 - \texttt{r}_{8}$一共9列。
+\end{itemize}
+
+context相关列的定义见下表。
 \begin{table}[!ht]
     \centering \resizebox{0.6\linewidth}{!}{
-        \begin{tabular}{*{8}{|c}|}
+        \begin{tabular}{*{6}{|c}|}
             \hline
-            clk & pc & instruction & flag & r0 & $\cdots$ & r15 & memory  \\ \hline
+            clk & pc  & flag & r0 & $\cdots$ & r8  \\ \hline
         \end{tabular}}
-    \caption{OlaVM的trace表结构}
-    \label{table: olavm-trace-table}
+    \caption{OlaVM的main trace表context相关列结构}
+    \label{table: olavm-trace-table-context}
 \end{table}
 
+\textbf{instruction columns}
+
+主trace的instruction相关列一共4列。定义如下：
+\begin{itemize}
+    \item \verb|instruction|：指令的编码， 具体定义见表 \ref{table: processor_instruction_decode}。
+    \item \verb|op1_imm|： 指令是否带立即数。1为带，0为不带。
+    \item \verb|opcode|：  指令的opcode\_sel指示。具体见下边列表 \ref{table: olavm-trace-table-opcode-value-list}。
+    \item \verb|immediate_value|： 如果op1\_imm为1，则存放指令带的立即数，否则为0。
+\end{itemize}
+
+\begin{table}[!ht]
+    \centering \resizebox{\linewidth}{!}{
+        \begin{tabular}{*{10}{|c}|}
+            \hline
+            ADD & MUL & EQ & ASSERT & MOV  & JMP & CJMP & CALL & RET & MLOAD  \\ \hline
+            $2^{34}$ & $2^{33}$ & $2^{32}$ & $2^{31}$ & $2^{30}$ & $2^{29}$ & $2^{28}$ & $2^{27}$ & $2^{26}$ & $2^{25}$ \\ \hline
+            MSTORE & END & RANGE\_CHECK & AND & OR & XOR & NOT & NEQ & GTE & \\ \hline
+            $2^{24}$ & $2^{23}$ & $2^{22}$ & $2^{21}$ & $2^{20}$ & $2^{19}$ & $2^{18}$ & $2^{17}$ & $2^{16}$ & \\ \hline
+        \end{tabular}}
+    \caption{OlaVM的main trace表opcode value列表}
+    \label{table: olavm-trace-table-opcode-value-list}
+\end{table}
+
+
+
+\textbf{register selector columns}
+
+主trace的register selector相关列一共31列。定义如下：
+\begin{itemize}
+    \item \verb|op0|：操作数0的值。
+    \item \verb|op1|：操作数1的值。
+    \item \verb|dst|：目的寄存器的值。
+    \item \verb|aux0|：辅助列，个别指令会用到。
+    \item \verb|op0 regster selectors|：指示op0使用通用寄存器op0\_reg(参与op0列与指示的context里op0\_reg的copy约束)。
+    \item \verb|op1 regster selectors|：指示op1使用通用寄存器op1\_reg(参与op1列与指示的context里op1\_reg的copy约束)。
+    \item \verb|destination regster selectors|：指示dst使用通用寄存器dst\_reg(参与dst列与指示的context里dst\_reg的copy约束)。
+\end{itemize}
+
+register selector相关列的定义见下表。
+\begin{table}[!ht]
+    \centering \resizebox{\linewidth}{!}{
+        \begin{tabular}{*{13}{|c}|}
+            \hline
+            op0 & op1 & dst & aux0 & sel\_op0\_r0 & $\cdots$ & sel\_op0\_r8 & sel\_op1\_r0 & $\cdots$ & sel\_op1\_r8 & sel\_dst\_r0 & $\cdots$ & sel\_dst\_r8 \\ \hline
+        \end{tabular}}
+    \caption{OlaVM的main trace表register selector相关列结构}
+    \label{table: olavm-trace-table-register-selector}
+\end{table}
+
+\textbf{opcode selector columns}
+
+主trace的opcode selector相关列一共12列。指示本行指令使用的opcode。相关列的定义见下表。
+\begin{table}[!ht]
+    \centering \resizebox{\linewidth}{!}{
+        \begin{tabular}{*{12}{|c}|}
+            \hline
+            sel\_add & sel\_mul & sel\_eq & sel\_assert & sel\_mov & sel\_jmp & sel\_cjmp & sel\_call & sel\_ret & sel\_mload & sel\_mstore & sel\_end  \\ \hline
+        \end{tabular}}
+    \caption{OlaVM的main trace表opcode selector相关列结构}
+    \label{table: olavm-trace-table-opcode-selector}
+\end{table}
+
+\textbf{builtin selector columns}
+
+主trace的builtin selector相关列一共7列。指示本行指令使用的builtin。相关列的定义见下表。
+\begin{table}[!ht]
+    \centering \resizebox{0.6\linewidth}{!}{
+        \begin{tabular}{*{7}{|c}|}
+            \hline
+            sel\_range\_check & sel\_and & sel\_or & sel\_xor & sel\_not & sel\_neq & sel\_gte  \\ \hline
+        \end{tabular}}
+    \caption{OlaVM的main trace表builtin selector相关列结构}
+    \label{table: olavm-trace-table-builtin-selector}
+\end{table}
+
+
+
 \subsubsection{Memory Trace}\label{subsubsec: olavm-trace-memory}
-OlaVM的内存trace由六列组成
+OlaVM的内存trace由五列组成
 \begin{itemize}
     \item \verb|addr|： 内存地址address的缩写。在表中是单调增的。
     \item \verb|clk|：VM的clock的缩写。操作内存时的VM时钟。在addr相同的情况下，clk是单调增的。
-    \item \verb|pc|： VM操作内存时的指令地址。
     \item \verb|rw|： VM操作内存时的操作状态，目前状态有两种：0代表读和1代表写。
     \item \verb|value|： 内存当前存储的值。
     \item \verb|prophet|： 如果是prophet操作内存，该字段为1，指令操作内存，该字段为0。
@@ -28,9 +117,9 @@ OlaVM的内存trace由六列组成
 
 \begin{table}[!ht]
     \centering \resizebox{0.4\linewidth}{!}{
-        \begin{tabular}{*{6}{|c}|}
+        \begin{tabular}{*{5}{|c}|}
             \hline
-            addr & clk & pc & rw & value & prophet    \\ \hline
+            addr & clk & rw & value & prophet    \\ \hline
         \end{tabular}}
     \caption{OlaVM的trace表结构}
     \label{table: olavm-trace-memory-table}
@@ -81,7 +170,7 @@ OlaVM的range check trace由5列组成
 \end{table}
 
 \subsubsection{Bitwise trace}\label{subsubsec: olavm-bitwise-trace}
-OlaVM的bitwise trace由六列组成。同时bitwise操作的两个输入数会放入builtin的range check表。
+OlaVM的bitwise trace由22列组成。同时bitwise操作的两个输入数会放入builtin的range check表。
 \begin{itemize}
     \item \verb|clk|： 该bitwise操作对应在主trace的时钟周期。
     \item \verb|sel|： 选择bitwise的操作类型，0, 1, 2分别对应AND, OR, XOR。
@@ -111,16 +200,17 @@ OlaVM的bitwise trace由六列组成。同时bitwise操作的两个输入数会�
 
 \begin{table}[!ht]
     \centering \resizebox{\linewidth}{!}{
-        \begin{tabular}{*{22}{|c}|}
+        \begin{tabular}{*{12}{|c}|}
             \hline
-            clk & sel & op1\_value & op2\_value & res\_value & target\_value & op1\_0 & op1\_1 & op1\_2 & op1\_3 & op2\_0 & op2\_1 & op2\_2 & op2\_3 & res\_0 & res\_1 & res\_2 & res\_3 & target\_0 & target\_1 & target\_2 & target\_3\\ \hline
+            clk & sel & op1\_value & op2\_value & res\_value & target\_value & op1\_0 & op1\_1 & op1\_2 & op1\_3 & op2\_0 & op2\_1 \\ \hline
+            op2\_2 & op2\_3 & res\_0 & res\_1 & res\_2 & res\_3 & target\_0 & target\_1 & target\_2 & target\_3  & & \\ \hline
         \end{tabular}}
     \caption{OlaVM的bitwise的trace表结构}
     \label{table: olavm-trace-bitwise-table}
 \end{table}
 
 \subsubsection{Comparison trace}\label{subsubsec: olavm-comparison-trace}
-OlaVM的comparison trace由六列组成。同时comparison操作的两个输入数会放入builtin的range check表。
+OlaVM的comparison trace由7列组成。同时comparison操作的两个输入数会放入builtin的range check表。
 \begin{itemize}
     \item \verb|clk|： 该comparison操作对应在主trace的时钟周期。
     \item \verb|sel|： 选择comparison的操作类型，sel=0为neq，sel=1为gte。
