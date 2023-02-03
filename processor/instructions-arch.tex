@@ -38,6 +38,7 @@ OlaVM的指令集定义如下表, A表示可能是立即数或者寄存器：
             \multirow{2}{*}{Field Operation}  & ADD & ri rj A & Compute rj + A and store the result in ri &   \\ \cline{2-5}
             & MUL & ri rj A & Compute rj * A and store the the result in ri &  \\ \hline
             \multirow{2}{*}{Cmp}  & EQ & ri A & Equality comparison & ri = A \\ \cline{2-5}
+            & NEQ & rj A &  check whether rj is not equal A and store the the result in flag & rj != A \\ \cline{2-5}
             & ASSERT & ri  A & Assert ri == A and vm will hang up if assertion fail &  \\  \hline
             Move & MOV & ri A & Copy the data of A to ri &  \\ \hline
             \multirow{5}{*}{Flow} & JMP & A & Set pc equal A &  \\ \cline{2-5}
@@ -52,7 +53,6 @@ OlaVM的指令集定义如下表, A表示可能是立即数或者寄存器：
             & OR & ri rj A &  Compute rj or A and store the the result in ri &  \\ \cline{2-5}
             & XOR & ri rj A &  Compute rj xor A and store the the result in ri &  \\ \cline{2-5}
             & NOT & ri A &  Compute not A and store the the result in ri &  \\ \cline{2-5}
-            & NEQ & rj A &  check whether rj is not equal A and store the the result in flag & rj != A \\ \cline{2-5}
             & GTE & rj A &  check whether rj is great than or equal to A and store the the result in flag &  rj >= A \\ \hline
         \end{tabular}%
     }
