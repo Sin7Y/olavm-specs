@@ -7,16 +7,16 @@ OlaVM设计指令地址和内存地址在同一空间访问。因为目前虚拟
 但是缺点是状态的访问不友好，不能随机访问stack中的某个地址的数据，对于寄存器模型只需要一条指令完成的读取操作，stack模型需要多次进行pop和push的操作。或者为了提高效率，如miden的设计中增加swap类指令辅助完成stack内数据访问。
 对于register模型，可以随机访问任意寄存器。但是缺点是约束模型需要对上下指令进行copy约束，证明的开销比stack大。
 
-像白皮书设计的那样，OlaVM选择的是寄存器模型。there are 16 general-purpose registers.
-符号表示为：$\texttt{r}_0 - \texttt{r}_{15}$。
-其中的$\texttt{r}_{15}$作为$\texttt{fp}$(frame pointer)。$\texttt{fp}$为$\texttt{r}_{15}$的别名。
+像白皮书设计的那样，OlaVM选择的是寄存器模型。there are 9 general-purpose registers.
+符号表示为：$\texttt{r}_0 - \texttt{r}_{8}$。
+其中的$\texttt{r}_{8}$作为$\texttt{fp}$(frame pointer)。$\texttt{fp}$为$\texttt{r}_{8}$的别名。
 
 pc指针加载程序后初始指向地址0的指令。之后pc指向的地址值随着指令的执行改变。在没执行jump指令和call指令时，每执行一条指令，如果指令没有使用立即数，pc寄存器里的地址加1，否则加2。
 
 \subsubsection{Olavm instructions}\label{subsec: processor-instructions-executor-instructions}
 为了尽量减少约束的degree。OlaVM选用了精简的指令集。
 
-Olavm 采用 Word(位宽) = 32bits对指令编码。
+Olavm 采用 Word(位宽) = 64bits对指令编码。
 一条指令通过一个opcode和最多三个操作数来编码，操作数可以是寄存器名称，也可以是立即数，一个指令编码由下面的8个fields组成。
 \begin{itemize}
     \item Field1: 字段名称NULL。占1 bit，不使用。
