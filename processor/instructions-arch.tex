@@ -36,24 +36,24 @@ OlaVM的指令集定义如下表, A表示可能是立即数或者寄存器：
             \hline
             \textit{Type}  & \textit{Instruction} & \textit{Operands} & \textit{Description} & \textit{flag} \\ \hline
             \multirow{2}{*}{Field Operation}  & ADD & ri rj A & Compute rj + A and store the result in ri &   \\ \cline{2-5}
-            & MUL & ri rj A & Compute rj * A and store the the result in ri &  \\ \hline
-            \multirow{2}{*}{Cmp}  & EQ & ri A & Equality comparison & ri = A \\ \cline{2-5}
-            & NEQ & rj A &  check whether rj is not equal A and store the the result in flag & rj != A \\ \cline{2-5}
+            & MUL & ri rj A & Compute rj * A and store the the result in ri &  \\ \cline{2-5}
+            & NOT & ri A &  Compute not A and store the the result in ri &  \\  \hline
+            \multirow{2}{*}{Cmp}  & EQ & ri rj A & Equality comparison and store the the result in ri & rj = A \\ \cline{2-5}
+            & NEQ & ri rj A &  check whether rj is not equal A and store the the result in ri & rj != A \\ \cline{2-5}
             & ASSERT & ri  A & Assert ri == A and vm will hang up if assertion fail &  \\  \hline
             Move & MOV & ri A & Copy the data of A to ri &  \\ \hline
             \multirow{5}{*}{Flow} & JMP & A & Set pc equal A &  \\ \cline{2-5}
             & END &  & only appears at the end of the program &  \\  \cline{2-5}
-            & CJMP & A & If flag = 1, set pc equal A, else increment pc as usual &  \\  \cline{2-5}
+            & CJMP & rj A & If rj = 1, set pc equal A, else increment pc as usual &  \\  \cline{2-5}
             & CALL & A & \multicolumn{1}{l|}{\begin{tabular}[c]{@{}l@{}}The Call instruction consists of the following steps\\ 1. store return pc to the frame address [fp-1].\\ 2. jump to the address A\end{tabular}} &  \\  \cline{2-5}
             & RET &  & \multicolumn{1}{l|}{\begin{tabular}[c]{@{}l@{}}The Ret instruction consists of the following two steps\\ 1. use the memory address stored in the fp register to find the returned pc and jump to the location of the returned pc.\\ 2. update the fp register to the fp before the call\end{tabular}} &  \\ \hline
-            \multirow{2}{*}{RAM} & MLOAD & ri [A] & Read the value from memory [A] and store it into ri. A can be a intermediate data or register value &  \\ \cline{2-5}
-            & MSTORE & [A] rj & Read the value from register rj and store it into memory [A]. A can be a intermediate data or register value &  \\ \hline
+            \multirow{2}{*}{RAM} & MLOAD & ri [A, imm] & \multicolumn{1}{l|}{\begin{tabular}[c]{@{}l@{}}Read the value from memory [A+imm] and store it into ri. \\ imm is optional, can not represent. \\ A can be a intermediate data or register value.\\ if A is a  register, can follow a immediate data.\end{tabular}}&  \\ \cline{2-5}
+            & MSTORE & [A, imm] rj & \multicolumn{1}{l|}{\begin{tabular}[c]{@{}l@{}}Read the value from register rj and store it into memory [A+imm]. \\ imm is optional, can not represent. \\ A can be a intermediate data or register value. \\ if A is a  register, can follow a immediate data.\end{tabular}}&  \\ \hline
             \multirow{8}{*}{BUILTIN} & RANGE CHECK & rj & range check the value in rj  &  \\ \cline{2-5}
             & AND & ri rj A &  Compute rj and A and store the the result in ri &  \\ \cline{2-5}
             & OR & ri rj A &  Compute rj or A and store the the result in ri &  \\ \cline{2-5}
             & XOR & ri rj A &  Compute rj xor A and store the the result in ri &  \\ \cline{2-5}
-            & NOT & ri A &  Compute not A and store the the result in ri &  \\ \cline{2-5}
-            & GTE & rj A &  check whether rj is great than or equal to A and store the the result in flag &  rj >= A \\ \hline
+            & GTE & ri rj A &  check whether rj is great than or equal to A and store the the result in ri &  rj >= A \\ \hline
         \end{tabular}%
     }
     \caption{Instruction set}
@@ -107,10 +107,10 @@ switch opcode：
         ri = rj * A
         break
     EQ:
-        if ri == A:
-            flag = 1
+        if rj == A:
+            ri = 1
         else
-            flag = 0
+            ri = 0
         break
     MOV:
         ri = A
@@ -119,7 +119,7 @@ switch opcode：
         pc = A
         goto new_op
     CJMP:
-        if flag == 1:
+        if rj == 1:
             pc = A
         goto new_op
     CALL:
@@ -155,10 +155,10 @@ switch opcode：
         ri = not
         break
     NEQ:
-        flag = ri != A
+        ri = rj != A
         break
     GTE:
-        flag = ri >= A
+        ri = rj >= A
         break
 pc = next
 goto new_op
